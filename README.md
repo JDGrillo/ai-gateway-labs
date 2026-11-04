@@ -1,10 +1,12 @@
-# AI Gateway preview demo
+# AI Gateway labs
 
 This deploys the **dedicated AI Gateway** (`Microsoft.ApiManagement/aigateways`), not a traditional API Management service (`Microsoft.ApiManagement/service`). Terraform uses AzureRM for the resource group and AzAPI for the preview gateway resource. It reuses your existing Microsoft Foundry account and model deployments; it does not provision models or a second APIM service. AI Gateway is a public preview, currently available in **East US 2** and **Sweden Central**. The template uses the provider's default SKU rather than assuming an undocumented SKU name or price; check the portal pricing before deployment.
 
 ## Run the labs
 
-Use an existing dedicated AI Gateway with an imported Chat Completions model, or provision one using the sections below. The generic [environment template](.env.example) contains only **three shared settings**. Keep deployment-specific values and credentials in the root `.env`, which is ignored by Git.
+Prerequisites: Python 3 with pip, access to a dedicated AI Gateway, and at least one imported model supporting Chat Completions. The pooling notebook requires two compatible model targets. If you do not have a gateway, follow **Provision a new gateway** and **Connect your Foundry account** below first.
+
+Clone or download this repository and open a terminal in its root directory. The generic [environment template](.env.example) contains only **three shared settings**. Keep deployment-specific values and credentials in the root `.env`, which is ignored by Git.
 
 | Setting | Where to find it in the [AI Gateway portal](https://ai.gateway.azure.com) |
 | --- | --- |
@@ -27,17 +29,17 @@ python -m jupyter lab
 
 The notebooks load the root `.env` when started from the repository root or `notebooks` directory. Existing shell variables take precedence, so remove stale shell values or update them before starting Jupyter. After editing `.env`, restart the notebook kernel so it reloads the file; restart Jupyter itself after changing shell variables. Missing required settings fail explicitly. Never save real keys or request headers in notebook output.
 
-## Suggested demo
+## Work through the notebooks
 
-Use a dedicated runtime key and demo-only alias, and show configuration in the portal without revealing credentials. A dedicated key is still gateway-wide, not restricted to that alias. One run of all three notebooks makes at most **16 model requests** and incurs usage charges; rerunning cells makes additional requests. Do **not** reprovision an existing gateway just to run the lab.
+In Jupyter, open the notebooks in the order below and run each one's cells from top to bottom using a Python 3 kernel with the installed requirements. Use a dedicated runtime key and a non-production alias. A dedicated key is still gateway-wide, not restricted to that alias. One run of all three notebooks makes at most **16 model requests** and incurs usage charges; rerunning cells makes additional requests. Do **not** reprovision an existing gateway just to run the lab.
 
-| Step | Show | Expected result and caveat |
+| Notebook | Exercise | Expected result and caveat |
 | --- | --- | --- |
-| 1. [Model access](notebooks/01-model-access.ipynb) | In the portal, show the model alias and backend target(s); run the notebook and point out the gateway host, alias, answer, and any reported token usage. | One request uses a gateway runtime key and the callable alias, not a Foundry credential. A response alone does not prove which backend answered. |
-| 2. [Governance](notebooks/02-governance.ipynb) | Run the notebook and show each request's status and reported token counts; compare them with gateway policy and telemetry. | At most three requests. A preconfigured demo consumption limit may cause a `429`; without one, all may succeed. A `429` can also come from backend quota, so check its source. |
-| 3. [Model pool](notebooks/03-model-pool.ipynb) | First configure the alias with two compatible chat targets as described below. Run the notebook and show the reported model IDs and counts, then inspect per-backend telemetry. | At most 12 requests. Equal weights do not guarantee an even split in a small sample; response text or a reported model ID alone is not definitive backend-routing evidence. |
+| 1. [Model access](notebooks/01-model-access.ipynb) | Inspect the model alias and backend target(s) in the portal, then send a chat request through the gateway. | The output includes the gateway host, alias, answer, and any reported token usage. One request uses a gateway runtime key, not a Foundry credential. A response alone does not prove which backend answered. |
+| 2. [Governance](notebooks/02-governance.ipynb) | Observe request status and reported token counts, then compare them with gateway policy and telemetry. | At most three requests. An optional preconfigured consumption limit may cause a `429`; without one, all may succeed. A `429` can also come from backend quota, so check its source. |
+| 3. [Model pool](notebooks/03-model-pool.ipynb) | Configure an alias with two compatible chat targets as described below, send requests to that alias, and inspect the reported model IDs, counts, and per-backend telemetry. | At most 12 requests. Equal weights do not guarantee an even split in a small sample; response text or a reported model ID alone is not definitive backend-routing evidence. |
 
-Use the same alias for all three notebooks; it may be a pool. To compare a pool with a single model in notebooks 1 and 2, choose a single-model chat alias and change `AI_GATEWAY_MODEL_ALIAS`. Changing a shared alias or consumption policy can affect other applications; use isolated demo configuration.
+Use the same alias for all three notebooks; it may be a pool. To compare a pool with a single model in notebooks 1 and 2, choose a single-model chat alias and change `AI_GATEWAY_MODEL_ALIAS`. Changing a shared alias or consumption policy can affect other applications; use isolated, non-production configuration.
 
 Local regression checks (mocked requests, no Azure traffic or keys required):
 
@@ -47,7 +49,7 @@ python -m unittest discover -s tests -v
 
 ## Provision a new gateway (optional)
 
-Prerequisites: Terraform 1.5+, Azure CLI (authenticated with `az login`), a subscription with Contributor access to create the demo resource group, and the `Microsoft.ApiManagement` provider registered. Your existing Foundry account must have a publicly accessible endpoint and at least one deployment supporting Chat Completions. For model import you also need Reader and User Access Administrator (or equivalent) on that account.
+Prerequisites: Terraform 1.5+, Azure CLI (authenticated with `az login`), a subscription with Contributor access to create a new resource group, and the `Microsoft.ApiManagement` provider registered. Your existing Foundry account must have a publicly accessible endpoint and at least one deployment supporting Chat Completions. For model import you also need Reader and User Access Administrator (or equivalent) on that account.
 
 In PowerShell, from this directory:
 
@@ -73,9 +75,9 @@ For Sweden Central, set `location = "swedencentral"` in the variables file. Terr
 3. Go to **Access > Keys > Create API key**. Store the gateway-wide runtime key securely; it is **not** a Foundry key or an APIM subscription key.
 4. Fill in the three settings described in **Run the labs**, then launch Jupyter. No Foundry credentials are needed in the notebook environment; the gateway uses its configured backend authentication.
 
-## Two-model pool demo
+## Configure a two-model pool
 
-In the [AI Gateway portal](https://ai.gateway.azure.com), configure an alias targeting **two registered models** that support Chat Completions. Set both targets to equal priority and equal weight, and ensure the gateway is authorized to call each backend. Prefer distinguishable model versions so the reported model IDs can help demonstrate routing.
+In the [AI Gateway portal](https://ai.gateway.azure.com), configure an alias targeting **two registered models** that support Chat Completions. Set both targets to equal priority and equal weight, and ensure the gateway is authorized to call each backend. Prefer distinguishable model versions so the reported model IDs can help distinguish responses.
 
 Set the shared `AI_GATEWAY_MODEL_ALIAS` in `.env` to that pooled alias. If you already have a compatible pool, reuse it; no separate pool environment variable or backend IDs are required by the notebooks. The notebooks do not create or change Azure aliases, policies, limits, or telemetry destinations.
 
@@ -103,7 +105,7 @@ Equal priority and equal weight request a 1:1 split over time, not an alternatin
 4. Once the directory is a Git repository, inspect `git status --short --untracked-files=all`, `git ls-files --cached --ignored --exclude-standard`, and the staged diff with `git diff --cached`. Investigate any tracked ignored files before publishing. Run a local secret scanner over the files and Git history, and enable hosting-provider secret scanning and push protection where available.
 5. If a credential was ever committed or exposed, revoke or rotate it; deleting it from the latest files does not remove it from Git history. Review and clean the history before making it public. Scanners and ignore rules reduce risk but cannot guarantee that every secret is caught.
 
-## Demo talking points
+## Concepts and scope
 
 | AI Gateway preview | Traditional API Management service |
 | --- | --- |
@@ -111,6 +113,12 @@ Equal priority and equal weight request a 1:1 split over time, not an alternatin
 | Gateway runtime API key or Entra runtime auth; managed identity to Foundry | APIM subscription keys or other configured API auth; separately configured backend auth |
 | AI-focused consumption and estimated-spend controls, model/tool telemetry | General API policies plus AI policies; often requires explicit API/policy setup |
 
-These are different management models, **not** a claim that traditional APIM cannot implement AI governance. To demo limits, configure a small **model consumption limit** for the test caller in the [AI Gateway portal](https://ai.gateway.azure.com/docs) first; the notebook never changes production policies or creates sustained load. To demo a stable alias, change its target to another compatible model in the portal and rerun the same notebook request. To inspect usage/latency, configure a telemetry destination in the portal before collecting traffic. Estimated spend is not a bill; use Foundry billing for actual charges. Federated MCP tools require an existing tool backend and are not provisioned here.
+These services use different management models; traditional APIM also supports AI-specific policies and governance.
+
+A stable model alias separates the name used by an application from its backend target(s). Changes to those targets must preserve API compatibility and account for other applications using the alias. Gateway caller authentication is separate from authentication between the gateway and each backend.
+
+Consumption limits must be configured before running the optional limit exercise. The notebooks do not modify policies or create sustained load. Configure a telemetry destination before collecting traffic if you need to inspect usage, latency, or backend routing. Estimated spend is not a bill; use Foundry billing for actual charges.
+
+Federated MCP tools require an existing tool backend and are outside the scope of these notebooks.
 
 References: [AI Gateway quickstart](https://learn.microsoft.com/azure/ai-gateway/quickstart-create-ai-gateway), [resource schema](https://learn.microsoft.com/azure/templates/microsoft.apimanagement/2026-09-01-preview/aigateways), [alias backend models API](https://learn.microsoft.com/en-us/rest/api/aigateway/ai-gateway-alias-resources/create-or-update?view=rest-aigateway-2026-11-01), [AI Gateway vs APIM](https://learn.microsoft.com/azure/ai-gateway/compare-api-management-service), [concepts](https://learn.microsoft.com/azure/ai-gateway/concepts).
