@@ -1,0 +1,4 @@
+jupyterlab
+ipykernel
+requests
+python-dotenv

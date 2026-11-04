@@ -1,0 +1,42 @@
+# Local configuration and credentials
+.env
+.env.*
+*.env
+*.env.*
+!.env.example
+.envrc
+.envrc.*
+secrets/
+secrets.json
+credentials.json
+service-account.json
+*.key
+*.pem
+*.p8
+*.p12
+*.pfx
+id_rsa
+id_ecdsa
+id_ed25519
+
+# Terraform state, local variables, plans, and crash logs
+.terraform/
+terraform.tfstate.d/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.*
+!*.tfvars.example
+*.tfplan
+*.tfplan.*
+tfplan
+tfplan.*
+*.plan
+*.plan.*
+plan.out
+crash.log
+crash.*.log
+
+# Python and Jupyter
+__pycache__/
+.ipynb_checkpoints/
