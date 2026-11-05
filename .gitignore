@@ -6,6 +6,7 @@
 !.env.example
 .envrc
 .envrc.*
+.lab-policy-state.json
 secrets/
 secrets.json
 credentials.json

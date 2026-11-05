@@ -53,10 +53,12 @@ class NotebookTests(unittest.TestCase):
                         self.assertEqual(cell["outputs"], [])
                         code = compile("".join(cell["source"]), f"{notebook.name}:{index}", "exec")
                         exec(code, namespace)
+                        if cell.get("id") == "policy-settings":
+                            namespace["use_temporary_policy"] = False
                 return post.call_args_list
 
     def test_requests_from_root_and_notebooks_directory(self):
-        for notebook, expected_count in zip(NOTEBOOKS, (1, 3, 12)):
+        for notebook, expected_count in zip(NOTEBOOKS, (1, 9, 12)):
             for cwd in ("root", "notebooks"):
                 with self.subTest(notebook=notebook.name, cwd=cwd):
                     calls = self.run_notebook(notebook, cwd=cwd)
