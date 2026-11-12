@@ -58,7 +58,7 @@ class NotebookTests(unittest.TestCase):
                 return post.call_args_list
 
     def test_requests_from_root_and_notebooks_directory(self):
-        for notebook, expected_count in zip(NOTEBOOKS, (1, 9, 12)):
+        for notebook, expected_count in zip(NOTEBOOKS, (1, 9, 6)):
             for cwd in ("root", "notebooks"):
                 with self.subTest(notebook=notebook.name, cwd=cwd):
                     calls = self.run_notebook(notebook, cwd=cwd)

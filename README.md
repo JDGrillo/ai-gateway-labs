@@ -33,13 +33,13 @@ Existing kernel environment variables take precedence over `.env`, **even if bla
 
 ## Work through the notebooks
 
-In Jupyter, open the notebooks in the order below and run each one's cells from top to bottom using a Python 3 kernel with the installed requirements. Use a dedicated runtime key and a non-production alias. A dedicated key is still gateway-wide, not restricted to that alias. One run of all three notebooks makes at most **22 model requests** and incurs usage charges; rerunning cells makes additional requests. Do **not** reprovision an existing gateway just to run the lab.
+In Jupyter, open the notebooks in the order below and run each one's cells from top to bottom using a Python 3 kernel with the installed requirements. Use a dedicated runtime key and a non-production alias. A dedicated key is still gateway-wide, not restricted to that alias. One run of all three notebooks makes at most **16 model requests** and incurs usage charges; rerunning cells makes additional requests. Do **not** reprovision an existing gateway just to run the lab.
 
 | Notebook | Exercise | Expected result and caveat |
 | --- | --- | --- |
 | 1. [Model access](notebooks/01-model-access.ipynb) | Inspect the model alias and backend target(s) in the portal, then send a chat request through the gateway. | The output includes the gateway host, alias, answer, and any reported token usage. One request uses a gateway runtime key, not a Foundry credential. A response alone does not prove which backend answered. |
 | 2. [Governance](notebooks/02-governance.ipynb) | Observe request status and reported token counts, then compare them with gateway policy and telemetry. | At most nine requests. Optional notebook cells can enable and remove a temporary token limit; without a limit, all may succeed. A `429` can also come from backend quota, so check its source. |
-| 3. [Model pool](notebooks/03-model-pool.ipynb) | Configure an alias with two compatible chat targets as described below, send requests to that alias, and inspect the reported model IDs, counts, and per-backend telemetry. | At most 12 requests. Equal weights do not guarantee an even split in a small sample; response text or a reported model ID alone is not definitive backend-routing evidence. |
+| 3. [Model pool](notebooks/03-model-pool.ipynb) | Configure an alias with two compatible chat targets as described below, send requests to that alias, and inspect the reported model IDs, prompt and cached token counts, and per-backend telemetry. | At most six requests with long prompts; these use more tokens and can cost more. Equal weights do not guarantee an even split in a small sample; response text or a reported model ID alone is not definitive backend-routing evidence. |
 
 Use the same alias for all three notebooks; it may be a pool. To compare a pool with a single model in notebooks 1 and 2, choose a single-model chat alias and change `AI_GATEWAY_MODEL_ALIAS`. Changing a shared alias or consumption policy can affect other applications; use isolated, non-production configuration.
 
@@ -131,7 +131,9 @@ az rest --method get --url "https://management.azure.com$gatewayId/workspaces/de
 
 Use a management API version supported by your gateway; the example matches the preview resource version in this Terraform template. Prefer the portal for pool setup rather than mixing management schemas from different API versions.
 
-Equal priority and equal weight request a 1:1 split over time, not an alternating or guaranteed split in any small sample. The notebook makes 12 short sequential calls using the **same alias**, displays each answer and any provider-reported model ID, and summarizes observed IDs. Different wording alone does *not* prove which backend answered; if response `model` is absent, identical, or rewritten, use the gateway's per-backend telemetry to verify routing. A policy or provider quota may interrupt the sample.
+Equal priority and equal weight request a 1:1 split over time, not an alternating or guaranteed split in any small sample. The notebook makes up to six sequential calls using the **same alias** and repeated long prompt, displays each answer, reported model ID, and prompt and cached token counts, and summarizes observed IDs. Different wording alone does *not* prove which backend answered; if response `model` is absent, identical, or rewritten, use the gateway's per-backend telemetry to verify routing. A policy or provider quota may interrupt the sample.
+
+[Azure OpenAI prompt caching](https://learn.microsoft.com/azure/foundry/openai/how-to/prompt-caching) is enabled by default on supported models. It requires at least 1,024 input tokens and an identical initial 1,024-token prefix. A positive `cached_tokens` value in the response indicates a hit; zero is a miss, and `not reported` means the field was absent. Pool targets may each need a warmup, and a hit is not guaranteed. To isolate caching from pool routing, temporarily set the environment to a separate non-production single-model alias and rerun the notebook setup cell; that test does not verify pooling.
 
 ## Before publishing
 
